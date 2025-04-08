@@ -4,6 +4,17 @@ import altair as alt
 
 # Make layout full-width
 st.set_page_config(layout="wide")
+# Force global table alignment
+st.markdown("""
+    <style>
+        thead tr th:first-child {display:none}
+        tbody th {display:none}
+        table td, table th {
+            text-align: center !important;
+        }
+    </style>
+""", unsafe_allow_html=True)
+
 
 # === THEME-AWARE TABLE STYLING ===
 def styled_table(df):
