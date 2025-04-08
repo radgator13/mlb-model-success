@@ -2,21 +2,23 @@
 import pandas as pd
 import altair as alt
 
-# Make layout full-width
+# Full-width layout
 st.set_page_config(layout="wide")
-# Force global table alignment
+
+# === GLOBAL CENTERING FOR TABLES ===
 st.markdown("""
     <style>
-        thead tr th:first-child {display:none}
-        tbody th {display:none}
         table td, table th {
             text-align: center !important;
         }
     </style>
 """, unsafe_allow_html=True)
 
+# === SECTION TITLE HELPER ===
+def section_title(title: str):
+    st.markdown(f"<h3 style='text-align: center;'>{title}</h3>", unsafe_allow_html=True)
 
-# === THEME-AWARE TABLE STYLING ===
+# === TABLE STYLE HELPER ===
 def styled_table(df):
     return df.style.set_properties(**{
         'text-align': 'center'
@@ -25,7 +27,7 @@ def styled_table(df):
         {'selector': 'td', 'props': [('text-align', 'center')]}
     ])
 
-# Load and cache the data
+# === LOAD DATA ===
 @st.cache_data
 def load_data():
     df = pd.read_csv("comparison.csv")
@@ -36,7 +38,7 @@ def load_data():
 
 df = load_data()
 
-# === FILTERS ===
+# === FILTERS AT TOP ===
 st.markdown("### 📅 Filter Games")
 col1, col2 = st.columns(2)
 with col1:
@@ -45,12 +47,12 @@ with col2:
     teams = sorted(set(df["HomeTeam"].unique()).union(df["AwayTeam"].unique()))
     selected_team = st.selectbox("Filter by Team (optional)", ["All"] + teams)
 
-# Filter data
+# === FILTERED DATA ===
 filtered = df[df["GameDate"].dt.date == selected_date]
 if selected_team != "All":
     filtered = filtered[(filtered["HomeTeam"] == selected_team) | (filtered["AwayTeam"] == selected_team)]
 
-# Spread + Over/Under outcome labels
+# === ENRICH FILTERED DATA ===
 filtered["ActualSpread"] = filtered["HomeScore"] - filtered["AwayScore"]
 filtered["SpreadCovered"] = filtered.apply(
     lambda row: (
@@ -65,15 +67,8 @@ filtered["OU_Result"] = filtered.apply(
     axis=1
 )
 
-# === HEADER ===
-st.title("⚾ MLB Odds Accuracy Dashboard")
-st.subheader(f"Games on {selected_date}")
-if selected_team != "All":
-    st.caption(f"Filtered to games with: `{selected_team}`")
-
-# === MAIN TABLE ===
-st.markdown("## 🧾 Game Details Table")
-
+# === GAME DETAILS TABLE ===
+section_title("📋 Game Details Table")
 renamed = filtered[[
     "HomeTeam", "AwayTeam", "HomeScore", "AwayScore",
     "Winner", "Favorite", "CorrectSide",
@@ -98,9 +93,8 @@ renamed = filtered[[
 
 default_cols = ["Home", "Away", "H", "A", "Win", "Fav", "ML ✓", "Spread", "O/U", "Final Total", "Covered?"]
 columns_to_show = st.multiselect("Choose columns to display:", options=renamed.columns.tolist(), default=default_cols)
-# Format numeric columns to 2 decimals
-format_dict = {"Spread": "{:.2f}", "O/U": "{:.2f}"}
 
+format_dict = {"Spread": "{:.2f}", "O/U": "{:.2f}"}
 styled_main = renamed[columns_to_show].style \
     .format(format_dict) \
     .set_properties(**{'text-align': 'center'}) \
@@ -108,12 +102,10 @@ styled_main = renamed[columns_to_show].style \
         {'selector': 'th', 'props': [('text-align', 'center')]},
         {'selector': 'td', 'props': [('text-align', 'center')]}
     ])
-
 st.table(styled_main)
 
-
 # === SUMMARY METRICS ===
-st.markdown("## 📊 Summary Stats")
+section_title("📊 Summary Stats")
 total = len(filtered)
 correct_ml = filtered["CorrectSide"].sum()
 over_hits = filtered["OverHit"].sum()
@@ -129,12 +121,11 @@ col4, col5 = st.columns(2)
 col4.metric("Over Hit", over_hits)
 col5.metric("Under Hit", under_hits)
 
-# === OVER/UNDER CHART ===
-st.markdown("### 🎯 Over/Under by Game")
+# === OVER/UNDER BY GAME ===
+section_title("🎯 Over/Under by Game")
 ou_df = filtered.copy()
 ou_df["Matchup"] = ou_df["AwayTeam"] + " @ " + ou_df["HomeTeam"]
 ou_df["Indicator"] = 1
-
 ou_chart = alt.Chart(ou_df).mark_bar().encode(
     x=alt.X("Matchup:N", sort=None),
     y=alt.Y("Indicator:Q", title="Outcome"),
@@ -143,13 +134,12 @@ ou_chart = alt.Chart(ou_df).mark_bar().encode(
 ).properties(height=400)
 st.altair_chart(ou_chart, use_container_width=True)
 
-# === SPREAD COVERAGE CHART ===
-st.markdown("### 🟢 Spread Coverage by Game")
+# === SPREAD COVERAGE BY GAME ===
+section_title("🟢 Spread Coverage by Game")
 spread_df = filtered.copy()
 spread_df["Matchup"] = spread_df["AwayTeam"] + " @ " + spread_df["HomeTeam"]
 spread_df["Result"] = spread_df["SpreadCovered"]
 spread_df["CoveredNumeric"] = 1
-
 spread_chart = alt.Chart(spread_df).mark_bar().encode(
     x=alt.X("Matchup:N", sort=None),
     y=alt.Y("CoveredNumeric:Q", title="Game Present (Color = Result)"),
@@ -161,12 +151,14 @@ spread_chart = alt.Chart(spread_df).mark_bar().encode(
 ).properties(height=400)
 st.altair_chart(spread_chart, use_container_width=True)
 
-# === AGGREGATE ===
-st.markdown("## 📅 Weekly + Overall Analysis")
+# === AGGREGATES ===
+section_title("📅 Weekly + Overall Analysis")
 all_df = df.copy()
 all_df["Week"] = all_df["GameDate"].dt.to_period("W").astype(str)
 all_df["CorrectSide"] = all_df["CorrectSide"].astype(int)
 all_df["ActualSpread"] = all_df["HomeScore"] - all_df["AwayScore"]
+
+# Spread and total result labels
 all_df["SpreadCovered"] = all_df.apply(
     lambda row: (
         "Home Covered" if row["Favorite"] == "Home" and row["ActualSpread"] > row["OpeningPointSpread"]
@@ -184,10 +176,7 @@ all_df["TotalResult"] = all_df.apply(
     ), axis=1
 )
 
-# === WEEKLY SUMMARY ===
-#st.markdown("## 📅 Weekly + Overall Analysis")
-
-# Create weekly summary for logic
+# Weekly summary
 weekly_raw = all_df.groupby("Week").agg({
     "CorrectSide": "mean",
     "GameDate": "count",
@@ -195,17 +184,13 @@ weekly_raw = all_df.groupby("Week").agg({
     "UnderHit": "sum"
 }).rename(columns={"CorrectSide": "ML_Accuracy", "GameDate": "Games"})
 
-# For display: convert ML Accuracy to %
 weekly_display = weekly_raw.copy()
 weekly_display["Moneyline Accuracy"] = (weekly_display["ML_Accuracy"] * 100).round().astype(int).astype(str) + "%"
 weekly_display = weekly_display[["Moneyline Accuracy", "Games", "OverHit", "UnderHit"]]
-
 st.table(styled_table(weekly_display))
 
 # === OVERALL TOTALS ===
-st.markdown("### 🧮 Overall Totals Across All Weeks")
-
-# Now safely compute overall % using numeric column
+section_title("🧮 Overall Totals Across All Weeks")
 total_games_all = weekly_raw["Games"].sum()
 correct_pct_all = (weekly_raw["ML_Accuracy"] * weekly_raw["Games"]).sum() / total_games_all
 total_overs = weekly_raw["OverHit"].sum()
@@ -219,12 +204,10 @@ totals_df = pd.DataFrame({
     "Over Hit": [f"{total_overs} ({over_pct:.0%})"],
     "Under Hit": [f"{total_unders} ({under_pct:.0%})"]
 }, index=["Total"])
-
 st.table(styled_table(totals_df))
 
-
-# === SPREAD COVERAGE SUMMARY ===
-st.markdown("### 📐 Spread Coverage Summary")
+# === SPREAD SUMMARY ===
+section_title("📐 Spread Coverage Summary")
 spread_counts = all_df["SpreadCovered"].value_counts()
 spread_total = spread_counts.sum()
 spread_summary = spread_counts.reset_index()
@@ -232,8 +215,8 @@ spread_summary.columns = ["Outcome", "Games"]
 spread_summary["%"] = (spread_summary["Games"] / spread_total).apply(lambda x: f"{x:.0%}")
 st.table(styled_table(spread_summary))
 
-# === TOTAL RESULTS BY FAVORITE SIDE ===
-st.markdown("### 🌡️ Total Results by Favorite")
+# === TOTAL RESULT SUMMARY ===
+section_title("🌡️ Total Results by Favorite")
 total_counts = all_df["TotalResult"].value_counts()
 total_total = total_counts.sum()
 total_summary = total_counts.reset_index()
