@@ -156,6 +156,23 @@ weekly_summary = weekly_df.groupby("Week").agg({
 })
 
 st.dataframe(weekly_summary.style.format({"Moneyline Accuracy": "{:.0%}"}))
+# === OVERALL TOTALS ===
+st.markdown("### 🧮 Overall Totals Across All Weeks")
+
+total_games_all = weekly_summary["Games"].sum()
+correct_pct_all = (weekly_summary["Moneyline Accuracy"] * weekly_summary["Games"]).sum() / total_games_all
+total_overs = weekly_summary["OverHit"].sum()
+total_unders = weekly_summary["UnderHit"].sum()
+
+# Build summary DataFrame
+totals_df = pd.DataFrame({
+    "Games": [total_games_all],
+    "Moneyline Accuracy": [f"{correct_pct_all:.0%}"],
+    "Over Hit": [total_overs],
+    "Under Hit": [total_unders]
+}, index=["Total"])
+
+st.table(totals_df)
 
 
 
