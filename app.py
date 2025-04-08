@@ -128,14 +128,37 @@ spread_chart = alt.Chart(spread_df).mark_bar().encode(
 ).properties(height=400)
 st.altair_chart(spread_chart, use_container_width=True)
 
-# === WEEKLY SUMMARY ===
-st.markdown("## 📅 Weekly Aggregate Summary")
+# === AGGREGATE + OVERALL ANALYSIS ===
+st.markdown("## 📅 Weekly & Overall Performance")
 
-weekly_df = df.copy()
-weekly_df["Week"] = weekly_df["GameDate"].dt.to_period("W").astype(str)
-weekly_df["CorrectSide"] = weekly_df["CorrectSide"].astype(int)
+# Build extended full dataset for aggregation
+all_df = df.copy()
+all_df["Week"] = all_df["GameDate"].dt.to_period("W").astype(str)
+all_df["CorrectSide"] = all_df["CorrectSide"].astype(int)
+all_df["ActualSpread"] = all_df["HomeScore"] - all_df["AwayScore"]
 
-weekly_summary = weekly_df.groupby("Week").agg({
+# Spread outcome
+all_df["SpreadCovered"] = all_df.apply(
+    lambda row: (
+        "Home Covered" if row["Favorite"] == "Home" and row["ActualSpread"] > row["OpeningPointSpread"]
+        else "Away Covered" if row["Favorite"] == "Away" and -row["ActualSpread"] > row["OpeningPointSpread"]
+        else "Home Missed" if row["Favorite"] == "Home"
+        else "Away Missed"
+    ), axis=1
+)
+
+# Total outcome
+all_df["TotalResult"] = all_df.apply(
+    lambda row: (
+        "Over Home" if row["OverHit"] and row["Favorite"] == "Home"
+        else "Over Away" if row["OverHit"] and row["Favorite"] == "Away"
+        else "Under Home" if row["UnderHit"] and row["Favorite"] == "Home"
+        else "Under Away"
+    ), axis=1
+)
+
+# Weekly summary
+weekly_summary = all_df.groupby("Week").agg({
     "CorrectSide": "mean",
     "GameDate": "count",
     "OverHit": "sum",
@@ -167,16 +190,6 @@ st.table(totals_df.style.set_properties(**{'text-align': 'center'}).set_table_st
 
 # === SPREAD COVERAGE SUMMARY ===
 st.markdown("### 📐 Spread Coverage Summary")
-all_df = df.copy()
-all_df["ActualSpread"] = all_df["HomeScore"] - all_df["AwayScore"]
-all_df["SpreadCovered"] = all_df.apply(
-    lambda row: (
-        "Home Covered" if row["Favorite"] == "Home" and row["ActualSpread"] > row["OpeningPointSpread"]
-        else "Away Covered" if row["Favorite"] == "Away" and -row["ActualSpread"] > row["OpeningPointSpread"]
-        else "Home Missed" if row["Favorite"] == "Home"
-        else "Away Missed"
-    ), axis=1
-)
 spread_counts = all_df["SpreadCovered"].value_counts()
 spread_summary = pd.DataFrame.from_dict(spread_counts, orient='index', columns=["Games"])
 st.table(spread_summary.style.set_properties(**{'text-align': 'center'}).set_table_styles([{
@@ -186,14 +199,6 @@ st.table(spread_summary.style.set_properties(**{'text-align': 'center'}).set_tab
 
 # === TOTAL RESULTS BY FAVORITE SIDE ===
 st.markdown("### 🌡️ Total Results by Favorite")
-all_df["TotalResult"] = all_df.apply(
-    lambda row: (
-        "Over Home" if row["OverHit"] and row["Favorite"] == "Home"
-        else "Over Away" if row["OverHit"] and row["Favorite"] == "Away"
-        else "Under Home" if row["UnderHit"] and row["Favorite"] == "Home"
-        else "Under Away"
-    ), axis=1
-)
 total_counts = all_df["TotalResult"].value_counts()
 total_summary = pd.DataFrame.from_dict(total_counts, orient='index', columns=["Games"])
 st.table(total_summary.style.set_properties(**{'text-align': 'center'}).set_table_styles([{
@@ -201,6 +206,3 @@ st.table(total_summary.style.set_properties(**{'text-align': 'center'}).set_tabl
     'props': [('text-align', 'center')]
 }]))
 
-# === FOOTER ===
-st.markdown("---")
-st.caption("Built with ❤️ using Streamlit • MLB Model Success")
