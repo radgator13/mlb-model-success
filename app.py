@@ -2,12 +2,15 @@
 import pandas as pd
 import altair as alt
 
-# Load the comparison CSV
+# Load and cache the data
 @st.cache_data
 def load_data():
     df = pd.read_csv("comparison.csv")
     df["GameDate"] = pd.to_datetime(df["GameDate"])
+    df["GameId"] = df["GameId"].astype(str)
+    df = df.drop_duplicates(subset=["GameId"])  # ✅ Remove duplicate games
     return df
+
 
 df = load_data()
 
