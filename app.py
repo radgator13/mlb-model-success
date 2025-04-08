@@ -164,38 +164,29 @@ all_df["TotalResult"] = all_df.apply(
 # === WEEKLY SUMMARY ===
 st.markdown("## 📅 Weekly + Overall Analysis")
 
-# Create weekly summary
-weekly_summary = all_df.groupby("Week").agg({
+# Create weekly summary for logic
+weekly_raw = all_df.groupby("Week").agg({
     "CorrectSide": "mean",
     "GameDate": "count",
     "OverHit": "sum",
     "UnderHit": "sum"
-}).rename(columns={
-    "CorrectSide": "Moneyline Accuracy",
-    "GameDate": "Games"
-})
+}).rename(columns={"CorrectSide": "ML_Accuracy", "GameDate": "Games"})
 
-# Format accuracy as % string
-weekly_summary["Moneyline Accuracy"] = (weekly_summary["Moneyline Accuracy"] * 100).round().astype(int).astype(str) + "%"
+# For display: convert ML Accuracy to %
+weekly_display = weekly_raw.copy()
+weekly_display["Moneyline Accuracy"] = (weekly_display["ML_Accuracy"] * 100).round().astype(int).astype(str) + "%"
+weekly_display = weekly_display[["Moneyline Accuracy", "Games", "OverHit", "UnderHit"]]
 
-# Display fully centered with st.table (not dataframe)
-def styled_table(df):
-    return df.style.set_properties(**{
-        'text-align': 'center'
-    }).set_table_styles([
-        {'selector': 'th', 'props': [('text-align', 'center')]},
-        {'selector': 'td', 'props': [('text-align', 'center')]}
-    ])
-
-st.table(styled_table(weekly_summary))
-
+st.table(styled_table(weekly_display))
 
 # === OVERALL TOTALS ===
 st.markdown("### 🧮 Overall Totals Across All Weeks")
-total_games_all = weekly_summary["Games"].sum()
-correct_pct_all = (weekly_summary["Moneyline Accuracy"] * weekly_summary["Games"]).sum() / total_games_all
-total_overs = weekly_summary["OverHit"].sum()
-total_unders = weekly_summary["UnderHit"].sum()
+
+# Now safely compute overall % using numeric column
+total_games_all = weekly_raw["Games"].sum()
+correct_pct_all = (weekly_raw["ML_Accuracy"] * weekly_raw["Games"]).sum() / total_games_all
+total_overs = weekly_raw["OverHit"].sum()
+total_unders = weekly_raw["UnderHit"].sum()
 over_pct = total_overs / total_games_all
 under_pct = total_unders / total_games_all
 
@@ -205,7 +196,9 @@ totals_df = pd.DataFrame({
     "Over Hit": [f"{total_overs} ({over_pct:.0%})"],
     "Under Hit": [f"{total_unders} ({under_pct:.0%})"]
 }, index=["Total"])
+
 st.table(styled_table(totals_df))
+
 
 # === SPREAD COVERAGE SUMMARY ===
 st.markdown("### 📐 Spread Coverage Summary")
