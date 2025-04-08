@@ -185,7 +185,7 @@ all_df["TotalResult"] = all_df.apply(
 )
 
 # === WEEKLY SUMMARY ===
-st.markdown("## 📅 Weekly + Overall Analysis")
+#st.markdown("## 📅 Weekly + Overall Analysis")
 
 # Create weekly summary for logic
 weekly_raw = all_df.groupby("Week").agg({
