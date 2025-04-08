@@ -2,6 +2,9 @@
 import pandas as pd
 import altair as alt
 
+# 👇 Make everything full-width
+st.set_page_config(layout="wide")
+
 # Load and cache the data
 @st.cache_data
 def load_data():
