@@ -199,7 +199,7 @@ spread_summary["%"] = (spread_summary["Games"] / spread_total).apply(lambda x: f
 st.dataframe(spread_summary, use_container_width=True)
 
 # === TOTAL RESULTS BY FAVORITE SIDE ===
-st.markdown("### 🌡️ Total Results by Favorite")
+st.markdown("### 🌡️ Total Results")
 total_counts = all_df["TotalResult"].value_counts()
 total_total = total_counts.sum()
 total_summary = total_counts.reset_index()
