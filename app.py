@@ -88,18 +88,28 @@ st.line_chart(line_df[["TotalRuns", "OpeningOverUnder"]])
 # --- Spread Coverage Color Chart ---
 st.markdown("### 🟢 Spread Coverage by Game")
 
+# Build a clean DataFrame
 spread_chart_df = filtered.copy()
 spread_chart_df["Matchup"] = spread_chart_df["AwayTeam"] + " @ " + spread_chart_df["HomeTeam"]
 spread_chart_df["Result"] = spread_chart_df["SpreadCovered"]
 
-spread_bar = alt.Chart(spread_chart_df).mark_bar().encode(
-    x=alt.X("Matchup", sort=None),
-    y=alt.Y("SpreadCoveredResult", title="Covered (1 = Yes, 0 = No)"),
-    color=alt.Color("Result", scale=alt.Scale(domain=["Covered", "Not Covered"], range=["green", "red"])),
+# Assign numeric for bar height (for all bars)
+spread_chart_df["CoveredNumeric"] = 1
+
+# Altair chart — one bar per matchup
+import altair as alt
+spread_chart = alt.Chart(spread_chart_df).mark_bar().encode(
+    x=alt.X("Matchup:N", sort=None),
+    y=alt.Y("CoveredNumeric:Q", title="Game Present (Color = Result)"),
+    color=alt.Color("Result:N", scale=alt.Scale(
+        domain=["Covered", "Not Covered"],
+        range=["green", "red"]
+    )),
     tooltip=["Matchup", "Result"]
 ).properties(height=400)
 
-st.altair_chart(spread_bar, use_container_width=True)
+st.altair_chart(spread_chart, use_container_width=True)
+
 
 # --- Weekly Summary ---
 st.markdown("## 📅 Weekly Aggregate Summary")
