@@ -71,12 +71,34 @@ col4.metric("Over Hit", over_hits)
 col5.metric("Under Hit", under_hits)
 #
 # --- Over/Under Bar Chart ---
-st.markdown("### 🎯 Over/Under Results")
-ou_df = pd.DataFrame({
-    "Result": ["Over", "Under", "Push"],
-    "Games": [over_hits, under_hits, pushes]
-})
-st.bar_chart(ou_df.set_index("Result"))
+st.markdown("### 🎯 Over/Under by Game")
+
+# Assign result as Over / Under / Push
+filtered["OU_Result"] = filtered.apply(
+    lambda row: "Over" if row["OverHit"]
+    else "Under" if row["UnderHit"]
+    else "Push",
+    axis=1
+)
+
+# Build matchup and color-coded outcome
+ou_df = filtered.copy()
+ou_df["Matchup"] = ou_df["AwayTeam"] + " @ " + ou_df["HomeTeam"]
+ou_df["Indicator"] = 1  # All bars = same height, just color-coded
+
+import altair as alt
+ou_chart = alt.Chart(ou_df).mark_bar().encode(
+    x=alt.X("Matchup:N", sort=None),
+    y=alt.Y("Indicator:Q", title="Outcome"),
+    color=alt.Color("OU_Result:N", scale=alt.Scale(
+        domain=["Over", "Under", "Push"],
+        range=["red", "blue", "gray"]
+    )),
+    tooltip=["Matchup", "OU_Result"]
+).properties(height=400)
+
+st.altair_chart(ou_chart, use_container_width=True)
+
 
 # --- Total Runs Line Chart ---
 st.markdown("### 📈 Total Runs vs Over/Under")
