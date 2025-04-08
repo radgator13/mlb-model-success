@@ -98,7 +98,19 @@ renamed = filtered[[
 
 default_cols = ["Home", "Away", "H", "A", "Win", "Fav", "ML ✓", "Spread", "O/U", "Final Total", "Covered?"]
 columns_to_show = st.multiselect("Choose columns to display:", options=renamed.columns.tolist(), default=default_cols)
-st.dataframe(renamed[columns_to_show].style.set_properties(**{'text-align': 'center'}), use_container_width=True)
+# Format numeric columns to 2 decimals
+format_dict = {"Spread": "{:.2f}", "O/U": "{:.2f}"}
+
+styled_main = renamed[columns_to_show].style \
+    .format(format_dict) \
+    .set_properties(**{'text-align': 'center'}) \
+    .set_table_styles([
+        {'selector': 'th', 'props': [('text-align', 'center')]},
+        {'selector': 'td', 'props': [('text-align', 'center')]}
+    ])
+
+st.table(styled_main)
+
 
 # === SUMMARY METRICS ===
 st.markdown("## 📊 Summary Stats")
