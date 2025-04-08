@@ -13,13 +13,16 @@ def load_data():
 
 df = load_data()
 
-# Sidebar filters
-st.sidebar.title("📅 Filter Games")
-dates = sorted(df["GameDate"].dt.date.unique())
-selected_date = st.sidebar.selectbox("Select Game Date", dates)
+# === FILTERS at Top of Page ===
+st.markdown("### 📅 Filter Games")
+col1, col2 = st.columns(2)
 
-teams = sorted(set(df["HomeTeam"].unique()).union(df["AwayTeam"].unique()))
-selected_team = st.sidebar.selectbox("Filter by Team (optional)", ["All"] + teams)
+with col1:
+    selected_date = st.selectbox("Select Game Date", sorted(df["GameDate"].dt.date.unique()))
+
+with col2:
+    teams = sorted(set(df["HomeTeam"].unique()).union(df["AwayTeam"].unique()))
+    selected_team = st.selectbox("Filter by Team (optional)", ["All"] + teams)
 
 # Filter data
 filtered = df[df["GameDate"].dt.date == selected_date]
@@ -128,16 +131,15 @@ spread_chart = alt.Chart(spread_df).mark_bar().encode(
 ).properties(height=400)
 st.altair_chart(spread_chart, use_container_width=True)
 
-# === AGGREGATE + OVERALL ANALYSIS ===
-st.markdown("## 📅 Weekly & Overall Performance")
+# === WEEKLY SUMMARY ===
+st.markdown("## 📅 Weekly Aggregate Summary")
 
-# Build extended full dataset for aggregation
 all_df = df.copy()
 all_df["Week"] = all_df["GameDate"].dt.to_period("W").astype(str)
 all_df["CorrectSide"] = all_df["CorrectSide"].astype(int)
 all_df["ActualSpread"] = all_df["HomeScore"] - all_df["AwayScore"]
 
-# Spread outcome
+# Spread + total results (for full dataset)
 all_df["SpreadCovered"] = all_df.apply(
     lambda row: (
         "Home Covered" if row["Favorite"] == "Home" and row["ActualSpread"] > row["OpeningPointSpread"]
@@ -147,7 +149,6 @@ all_df["SpreadCovered"] = all_df.apply(
     ), axis=1
 )
 
-# Total outcome
 all_df["TotalResult"] = all_df.apply(
     lambda row: (
         "Over Home" if row["OverHit"] and row["Favorite"] == "Home"
@@ -157,7 +158,6 @@ all_df["TotalResult"] = all_df.apply(
     ), axis=1
 )
 
-# Weekly summary
 weekly_summary = all_df.groupby("Week").agg({
     "CorrectSide": "mean",
     "GameDate": "count",
@@ -165,7 +165,7 @@ weekly_summary = all_df.groupby("Week").agg({
     "UnderHit": "sum"
 }).rename(columns={"CorrectSide": "Moneyline Accuracy", "GameDate": "Games"})
 
-st.dataframe(weekly_summary.style.format({"Moneyline Accuracy": "{:.0%}"}))
+st.dataframe(weekly_summary.style.format({"Moneyline Accuracy": "{:.0%}"}), use_container_width=True)
 
 # === OVERALL TOTALS ===
 st.markdown("### 🧮 Overall Totals Across All Weeks")
@@ -183,29 +183,27 @@ totals_df = pd.DataFrame({
     "Over Hit": [f"{total_overs} ({over_pct:.0%})"],
     "Under Hit": [f"{total_unders} ({under_pct:.0%})"]
 }, index=["Total"])
-st.table(totals_df.style.set_properties(**{'text-align': 'center'}).set_table_styles([{
-    'selector': 'th',
-    'props': [('text-align', 'center')]
-}]))
+
+st.dataframe(totals_df, use_container_width=True)
 
 # === SPREAD COVERAGE SUMMARY ===
 st.markdown("### 📐 Spread Coverage Summary")
 spread_counts = all_df["SpreadCovered"].value_counts()
+spread_total = spread_counts.sum()
 spread_summary = spread_counts.reset_index()
 spread_summary.columns = ["Outcome", "Games"]
-st.table(spread_summary.style.set_properties(**{'text-align': 'center'}).set_table_styles([{
-    'selector': 'th',
-    'props': [('text-align', 'center')]
-}]))
+spread_summary["%"] = (spread_summary["Games"] / spread_total).apply(lambda x: f"{x:.0%}")
+st.dataframe(spread_summary, use_container_width=True)
 
 # === TOTAL RESULTS BY FAVORITE SIDE ===
 st.markdown("### 🌡️ Total Results by Favorite")
 total_counts = all_df["TotalResult"].value_counts()
+total_total = total_counts.sum()
 total_summary = total_counts.reset_index()
 total_summary.columns = ["Outcome", "Games"]
-st.table(total_summary.style.set_properties(**{'text-align': 'center'}).set_table_styles([{
-    'selector': 'th',
-    'props': [('text-align', 'center')]
-}]))
+total_summary["%"] = (total_summary["Games"] / total_total).apply(lambda x: f"{x:.0%}")
+st.dataframe(total_summary, use_container_width=True)
 
-
+# === FOOTER ===
+st.markdown("---")
+st.caption("Built with ❤️ using Streamlit • MLB Model Success")
