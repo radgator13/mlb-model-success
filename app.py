@@ -191,7 +191,8 @@ st.table(totals_df.style.set_properties(**{'text-align': 'center'}).set_table_st
 # === SPREAD COVERAGE SUMMARY ===
 st.markdown("### 📐 Spread Coverage Summary")
 spread_counts = all_df["SpreadCovered"].value_counts()
-spread_summary = pd.DataFrame.from_dict(spread_counts, orient='index', columns=["Games"])
+spread_summary = spread_counts.reset_index()
+spread_summary.columns = ["Outcome", "Games"]
 st.table(spread_summary.style.set_properties(**{'text-align': 'center'}).set_table_styles([{
     'selector': 'th',
     'props': [('text-align', 'center')]
@@ -200,9 +201,11 @@ st.table(spread_summary.style.set_properties(**{'text-align': 'center'}).set_tab
 # === TOTAL RESULTS BY FAVORITE SIDE ===
 st.markdown("### 🌡️ Total Results by Favorite")
 total_counts = all_df["TotalResult"].value_counts()
-total_summary = pd.DataFrame.from_dict(total_counts, orient='index', columns=["Games"])
+total_summary = total_counts.reset_index()
+total_summary.columns = ["Outcome", "Games"]
 st.table(total_summary.style.set_properties(**{'text-align': 'center'}).set_table_styles([{
     'selector': 'th',
     'props': [('text-align', 'center')]
 }]))
+
 
