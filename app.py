@@ -161,15 +161,34 @@ all_df["TotalResult"] = all_df.apply(
     ), axis=1
 )
 
-# === WEEKLY SUMMARY TABLE ===
+# === WEEKLY SUMMARY ===
+st.markdown("## 📅 Weekly + Overall Analysis")
+
+# Create weekly summary
 weekly_summary = all_df.groupby("Week").agg({
     "CorrectSide": "mean",
     "GameDate": "count",
     "OverHit": "sum",
     "UnderHit": "sum"
-}).rename(columns={"CorrectSide": "Moneyline Accuracy", "GameDate": "Games"})
+}).rename(columns={
+    "CorrectSide": "Moneyline Accuracy",
+    "GameDate": "Games"
+})
+
+# Format accuracy as % string
+weekly_summary["Moneyline Accuracy"] = (weekly_summary["Moneyline Accuracy"] * 100).round().astype(int).astype(str) + "%"
+
+# Display fully centered with st.table (not dataframe)
+def styled_table(df):
+    return df.style.set_properties(**{
+        'text-align': 'center'
+    }).set_table_styles([
+        {'selector': 'th', 'props': [('text-align', 'center')]},
+        {'selector': 'td', 'props': [('text-align', 'center')]}
+    ])
 
 st.table(styled_table(weekly_summary))
+
 
 # === OVERALL TOTALS ===
 st.markdown("### 🧮 Overall Totals Across All Weeks")
