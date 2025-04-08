@@ -138,6 +138,26 @@ spread_chart = alt.Chart(spread_df).mark_bar().encode(
 ).properties(height=400)
 
 st.altair_chart(spread_chart, use_container_width=True)
+# === WEEKLY SUMMARY ===
+st.markdown("## 📅 Weekly Aggregate Summary")
+
+weekly_df = df.copy()
+weekly_df["Week"] = weekly_df["GameDate"].dt.to_period("W").astype(str)
+weekly_df["CorrectSide"] = weekly_df["CorrectSide"].astype(int)
+
+weekly_summary = weekly_df.groupby("Week").agg({
+    "CorrectSide": "mean",
+    "GameDate": "count",
+    "OverHit": "sum",
+    "UnderHit": "sum"
+}).rename(columns={
+    "CorrectSide": "Moneyline Accuracy",
+    "GameDate": "Games"
+})
+
+st.dataframe(weekly_summary.style.format({"Moneyline Accuracy": "{:.0%}"}))
+
+
 
 # Footer
 st.markdown("---")
